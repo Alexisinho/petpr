@@ -1,4 +1,5 @@
 Task:
+
 Full CI/CD Pipeline for Dockerized Web App on AWS EC2
 Design and implement a simple web application (Node.js, Python, or static HTML).
 
