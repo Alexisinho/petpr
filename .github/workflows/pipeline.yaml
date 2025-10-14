@@ -26,7 +26,6 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/hub-repo:latest
-name: CI/CD pipeline
 
 jobs:
   create-docker-image:
