@@ -28,15 +28,6 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/hub-repo:latest
 name: CI/CD pipeline
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-  workflow_dispatch:
-
 jobs:
   create-docker-image:
     runs-on: ubuntu-latest
