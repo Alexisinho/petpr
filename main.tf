@@ -1,50 +1,25 @@
-provider "aws" {
-    region = "eu-central-1"
-}
+module "vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+  version = "6.4.0"
 
-resource "aws_vpc" "pet-vpc" {
-  cidr_block = "10.0.0.0/16"
+  name = "pet-vpc"
+  cidr = var.vpc_cidr_block
+
+  azs             = var.availability_zones
+  public_subnets  = var.subnet_cidr_block
+
+  enable_nat_gateway = false
+  enable_vpn_gateway = false
+
   tags = {
-    Name = "pet-vpc"
+    Terraform = "true"
   }
-}
-
-resource "aws_subnet" "pet-subnet" {
-    vpc_id = aws_vpc.pet-vpc.id
-    cidr_block = var.subnet_cidr_block
-    availability_zone = var.avail_zone
-    tags = {
-        Name = "pet-subnet"
-    }
-}
-
-resource "aws_internet_gateway" "pet-igw" {
-  vpc_id = aws_vpc.pet-vpc.id
-  tags = {
-    Name = "pet-igw"
-  }
-}
-
-resource "aws_route_table" "pet-rt" {
-    vpc_id = aws_vpc.pet-vpc.id
-    route {
-        cidr_block = "0.0.0.0/0"
-        gateway_id = aws_internet_gateway.pet-igw.id
-    }
-    tags = {
-        Name = "pet-main-rt"
-    }
-}   
-
-resource "aws_route_table_association" "pet-rt-assoc" {
-  subnet_id      = aws_subnet.pet-subnet.id
-  route_table_id = aws_route_table.pet-rt.id
 }
 
 resource "aws_security_group" "pet-sg" {
   name        = "allow_tls"
   description = "Allow TLS inbound traffic and all outbound traffic"
-  vpc_id      = aws_vpc.pet-vpc.id
+  vpc_id      = module.vpc.vpc_id
   tags = {
     Name = "allow_tls"
   }
@@ -83,7 +58,7 @@ resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
 resource "aws_instance" "pet-server" {
     ami                         = var.ami_id
     instance_type               = var.instance_type
-    subnet_id                   = aws_subnet.pet-subnet.id
+    subnet_id                   = module.vpc.public_subnets[0]
     vpc_security_group_ids      = [aws_security_group.pet-sg.id]
     availability_zone           = var.avail_zone
     associate_public_ip_address = true

@@ -4,10 +4,22 @@ variable avail_zone {
     default = "eu-central-1a"
 }
 
+variable availability_zones {
+    description = "Availability zones for vpc and subnet"
+    type        = list
+    default = ["eu-central-1a"]
+}
+
 variable subnet_cidr_block {
     description = "CIDR block for the subnet"
+    type        = list
+    default = ["10.0.10.0/24"]
+}
+
+variable "vpc_cidr_block" {
+    description = "CIDR block for the VPC"
     type        = string
-    default = "10.0.10.0/24"
+    default     = "10.0.0.0/16"
 }
 
 variable public_key_path {
@@ -51,3 +63,4 @@ variable instance_type {
     type        = string
     default = "t3.micro"
 }
+

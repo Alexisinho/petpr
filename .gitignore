@@ -5,9 +5,6 @@
 *.tfstate
 *.tfstate.*
 
-# tf variables files, may include sensitive data
-*.tfvars
-
 # Ansible files
 pet-playbook.yaml
 hosts.ini
