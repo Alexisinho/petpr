@@ -1,0 +1,37 @@
+---
+- name: docker-server
+  hosts: aws_ec2
+  become: yes
+  tasks:
+    - name: make sure docker is installed
+      yum:
+        name: docker
+        update_cache: yes
+        state: present
+
+    - name: ensure docker is running 
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Docker Login
+      docker_login:
+        username: Aliaksinho13
+        password: ZJntpZLhG6b3zwG
+        registry: https://index.docker.io/v1/
+
+    - name: pull docker image
+      docker_image:
+        name: "aliaksinho13/hub-repo:latest"
+        source: pull
+
+    - name: run docker container
+      docker_container:
+        name: pet-app
+        image: "aliaksinho13/hub-repo:latest"
+        state: started
+        restart_policy: always
+        ports:
+          - "80:80"
+        

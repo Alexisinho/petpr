@@ -5,8 +5,3 @@
 *.tfstate
 *.tfstate.*
 
-#test
-ansible.cfg
-inventory/
-pet-playbook.yaml
-test-pet-playbook.yaml

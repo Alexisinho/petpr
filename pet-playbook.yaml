@@ -1,0 +1,37 @@
+---
+- name: docker-server
+  hosts: aws_ec2
+  become: yes
+  tasks:
+    - name: make sure docker is installed
+      yum:
+        name: docker
+        update_cache: yes
+        state: present
+
+    - name: ensure docker is running 
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Docker Login
+      docker_login:
+        username: "{{ lookup('env','DOCKERHUB_USERNAME') }}"
+        password: "{{ lookup('env','DOCKERHUB_TOKEN') }}"
+        registry: https://index.docker.io/v1/
+
+    - name: pull docker image
+      docker_image:
+        name: "{{ lookup('env', 'DOCKER_IMAGE') }}"
+        source: pull
+
+    - name: run docker container
+      docker_container:
+        name: pet-app
+        image: "{{ lookup('env', 'DOCKER_IMAGE') }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "80:80"
+        
