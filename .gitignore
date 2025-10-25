@@ -5,6 +5,8 @@
 *.tfstate
 *.tfstate.*
 
-# Ansible files
+#test
+ansible.cfg
+inventory/
 pet-playbook.yaml
-hosts.ini
+test-pet-playbook.yaml
