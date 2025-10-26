@@ -26,3 +26,21 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/hub-repo:latest
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.1
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+      - name: Install Ansible and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible boto3 botocore docker
+      - name: Run Ansible Playbook
+        run: ansible-playbook -i inventory/aws_ec2.yaml pet-playbook.yaml
