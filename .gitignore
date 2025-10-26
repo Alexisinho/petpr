@@ -5,3 +5,5 @@
 *.tfstate
 *.tfstate.*
 
+# test ansible
+test-pet-playbook.yaml

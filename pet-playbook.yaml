@@ -1,8 +1,22 @@
----
+--- 
 - name: docker-server
   hosts: aws_ec2
   become: yes
+  collections:
+    - community.docker
   tasks:
+    - name: ensure pip3 is present
+      package:
+        name: python3-pip
+        state: present
+
+    - name: install docker SDK on remote for Ansible docker modules
+      pip:
+        name: docker
+        state: present
+        executable: pip3
+        extra_args: --ignore-installed requests urllib3
+
     - name: make sure docker is installed
       yum:
         name: docker
