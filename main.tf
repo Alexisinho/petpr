@@ -17,7 +17,7 @@ module "vpc" {
 }
 
 resource "aws_security_group" "pet-sg" {
-  name        = "allow_tls"
+  name        = "pet-sg"
   description = "Allow TLS inbound traffic and all outbound traffic"
   vpc_id      = module.vpc.vpc_id
   tags = {

@@ -1,0 +1,51 @@
+--- 
+- name: docker-server
+  hosts: aws_ec2
+  become: yes
+  collections:
+    - community.docker
+  tasks:
+    - name: ensure pip3 is present
+      package:
+        name: python3-pip
+        state: present
+
+    - name: install docker SDK on remote for Ansible docker modules
+      pip:
+        name: docker
+        state: present
+        executable: pip3
+        extra_args: --ignore-installed requests urllib3
+
+    - name: make sure docker is installed
+      yum:
+        name: docker
+        update_cache: yes
+        state: present
+
+    - name: ensure docker is running 
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Docker Login
+      docker_login:
+        username: "{{ lookup('env','DOCKERHUB_USERNAME') }}"
+        password: "{{ lookup('env','DOCKERHUB_TOKEN') }}"
+        registry: https://index.docker.io/v1/
+
+    - name: pull docker image
+      docker_image:
+        name: "{{ lookup('env', 'DOCKER_IMAGE') }}"
+        source: pull
+
+    - name: run docker container
+      docker_container:
+        name: pet-app
+        image: "{{ lookup('env', 'DOCKER_IMAGE') }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "80:80"
+        
