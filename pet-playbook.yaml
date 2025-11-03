@@ -4,6 +4,11 @@
   become: yes
   collections:
     - community.docker
+  vars:
+    prometheus_image: "prom/prometheus:latest"
+    node_exporter_image: "quay.io/prometheus/node-exporter:latest"
+    prometheus_config_dir: /opt/prometheus
+    prometheus_data_dir: /opt/prometheus/data
   tasks:
     - name: ensure pip3 is present
       package:
@@ -48,4 +53,55 @@
         restart_policy: always
         ports:
           - "80:80"
-        
+######################################################'
+    - name: Create Prometheus config directory
+      file:
+        path: "{{ prometheus_config_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Deploy Prometheus config
+      copy:
+        dest: "{{ prometheus_config_dir }}/prometheus.yml"
+        content: |
+          global:
+            scrape_interval: 15s
+
+          scrape_configs:
+            - job_name: 'node-exporter'
+              static_configs:
+                - targets: ['localhost:9100']
+
+            - job_name: 'pet-app'
+              metrics_path: /healthz
+              static_configs:
+                - targets: ['localhost:80']
+
+    - name: Fix Prometheus data permissions
+      file:
+        path: "{{ prometheus_data_dir }}"
+        owner: 65534
+        group: 65534
+        recurse: yes
+
+    - name: Run Prometheus container
+      docker_container:
+        name: prometheus
+        image: "{{ prometheus_image }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "9090:9090"
+        volumes:
+          - "{{ prometheus_config_dir }}/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+          - "{{ prometheus_data_dir }}:/prometheus"
+
+    # --- Node Exporter setup ---
+    - name: Run Node Exporter container
+      docker_container:
+        name: node_exporter
+        image: "{{ node_exporter_image }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "9100:9100"

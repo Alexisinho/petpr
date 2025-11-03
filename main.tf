@@ -41,6 +41,14 @@ resource "aws_vpc_security_group_ingress_rule" "allow_http" {
     to_port           = 80
 }
 
+resource "aws_vpc_security_group_ingress_rule" "allow_prometheus" {
+    security_group_id = aws_security_group.pet-sg.id
+    cidr_ipv4         = var.my_ip
+    from_port         = 9090
+    ip_protocol       = "tcp"
+    to_port           = 9090
+}
+
 resource "aws_vpc_security_group_ingress_rule" "allow_https" {
     security_group_id = aws_security_group.pet-sg.id
     cidr_ipv4         = var.my_ip
