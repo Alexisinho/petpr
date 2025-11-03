@@ -44,6 +44,22 @@ resource "aws_vpc_security_group_ingress_rule" "allow_http" {
 resource "aws_vpc_security_group_ingress_rule" "allow_https" {
     security_group_id = aws_security_group.pet-sg.id
     cidr_ipv4         = var.my_ip
+    from_port         = 9090
+    ip_protocol       = "tcp"
+    to_port           = 9090
+}
+
+resource "aws_vpc_security_group_ingress_rule" "allow_https" {
+    security_group_id = aws_security_group.pet-sg.id
+    cidr_ipv4         = var.my_ip
+    from_port         = 9100
+    ip_protocol       = "tcp"
+    to_port           = 9100
+}
+
+resource "aws_vpc_security_group_ingress_rule" "allow_https" {
+    security_group_id = aws_security_group.pet-sg.id
+    cidr_ipv4         = var.my_ip
     from_port         = 443
     ip_protocol       = "tcp"
     to_port           = 443
