@@ -8,7 +8,10 @@ on:
     branches:
       - main
   workflow_dispatch:
-
+env:
+  DOCKERHUB_IMAGE: ${{ secrets.DOCKER_IMAGE }}
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 jobs:
   docker:
     name: Build and Push Docker Image
@@ -71,5 +74,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible boto3 botocore docker
 
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/latest.pem
+          chmod 600 ~/.ssh/latest.pem
+
       - name: Run Ansible Playbook
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-central-1
         run: ansible-playbook -i inventory/aws_ec2.yaml pet-playbook.yaml

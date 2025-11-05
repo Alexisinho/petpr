@@ -9,12 +9,18 @@
     node_exporter_image: "quay.io/prometheus/node-exporter:latest"
     prometheus_config_dir: /opt/prometheus
     prometheus_data_dir: /opt/prometheus/data
+    image_name: "{{ lookup('env','DOCKERHUB_IMAGE') | default('aliaksinho13/hub-repo:latest', true) }}"
   tasks:
     - name: ensure pip3 is present
       package:
         name: python3-pip
         state: present
-
+    - name: ensure DOCKERHUB_IMAGE env is provided (CI) or fallback used
+      assert:
+        that:
+          - image_name is not none
+          - image_name != ''
+        fail_msg: "DOCKERHUB_IMAGE is not set and no default is configured. Set the env var in CI or update the playbook variable."
     - name: install docker SDK on remote for Ansible docker modules
       pip:
         name: docker
@@ -38,17 +44,17 @@
       docker_login:
         username: "{{ lookup('env','DOCKERHUB_USERNAME') }}"
         password: "{{ lookup('env','DOCKERHUB_TOKEN') }}"
-        registry: https://index.docker.io/v1/
+        registry_url: https://index.docker.io/v1/
 
     - name: pull docker image
       docker_image:
-        name: "{{ lookup('env', 'DOCKER_IMAGE') }}"
+        name: "{{ image_name }}"
         source: pull
 
     - name: run docker container
       docker_container:
         name: pet-app
-        image: "{{ lookup('env', 'DOCKER_IMAGE') }}"
+        image: "{{ image_name }}"
         state: started
         restart_policy: always
         ports:
