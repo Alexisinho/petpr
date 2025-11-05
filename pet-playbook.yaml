@@ -38,7 +38,7 @@
       docker_login:
         username: "{{ lookup('env','DOCKERHUB_USERNAME') }}"
         password: "{{ lookup('env','DOCKERHUB_TOKEN') }}"
-        registry: https://index.docker.io/v1/
+        registry_url: https://index.docker.io/v1/
 
     - name: pull docker image
       docker_image:
