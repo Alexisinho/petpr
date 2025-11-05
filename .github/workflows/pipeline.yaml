@@ -71,6 +71,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible boto3 botocore docker
 
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/latest.pem
+          chmod 600 ~/.ssh/latest.pem
+
       - name: Run Ansible Playbook
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
