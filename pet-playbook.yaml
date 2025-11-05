@@ -42,13 +42,13 @@
 
     - name: pull docker image
       docker_image:
-        name: "{{ lookup('env', 'DOCKER_IMAGE') }}"
+        name: "{{ lookup('env', 'DOCKERHUB_IMAGE') }}"
         source: pull
 
     - name: run docker container
       docker_container:
         name: pet-app
-        image: "{{ lookup('env', 'DOCKER_IMAGE') }}"
+        image: "{{ lookup('env', 'DOCKERHUB_IMAGE') }}"
         state: started
         restart_policy: always
         ports:
