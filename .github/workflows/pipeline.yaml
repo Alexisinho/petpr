@@ -9,7 +9,7 @@ on:
       - main
   workflow_dispatch:
 env:
-  DOCKER_IMAGE: ${{ secrets.DOCKER_IMAGE }}
+  DOCKERHUB_IMAGE: ${{ secrets.DOCKER_IMAGE }}
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 jobs:
