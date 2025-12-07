@@ -33,8 +33,6 @@ jobs:
     name: Configure Servers with Ansible
     runs-on: ubuntu-latest
     needs: [terraform]
-    env:
-      ANSIBLE_HOST_KEY_CHECKING: "False"
     steps:
       - uses: actions/checkout@v5
 
@@ -63,4 +61,10 @@ jobs:
           chmod 600 ~/.ssh/latest.pem
 
       - name: Run Ansible Playbook
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_IMAGE }}
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+          ANSIBLE_FORCE_COLOR: "true"
         run: ansible-playbook -i inventory/aws_ec2.yaml pet-playbook.yaml
