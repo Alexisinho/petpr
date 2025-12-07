@@ -1,0 +1,87 @@
+name: Continuous Integration Workflow
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+
+  # Run unit tests to make sure everything is 👍
+  test:
+    name: 'Run unit tests'
+    runs-on: ubuntu-latest
+    steps:
+
+    # 1. Забираем код
+    - uses: actions/checkout@v5
+
+    # 2. Ставим Python
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+
+    # 3. Ставим зависимости
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    # 4. Запускаем тесты
+    - name: Run Tests with Pytest
+      run: python -m pytest -v
+
+  # Run the linter to check for code style issues
+  lint:
+    name: 'Run linter'
+    runs-on: ubuntu-latest
+    steps:    
+
+    - uses: actions/checkout@v5
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+        cache: 'pip' # <-- Важно: кэшируем пакеты, чтобы не качать их дважды (для lint и test)
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8
+        # Если твоему линтеру не нужны библиотеки проекта, requirements можно не ставить. 
+        # Но если flake8 ругается на импорты, то раскомментируй строку ниже:
+        # pip install -r requirements.txt
+
+    - name: Run Flake8
+      run: flake8 .
+
+  docker:
+    name: Build and Push Docker Image to DockerHub
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    env:
+      DOCKERHUB_IMAGE: ${{ secrets.DOCKER_IMAGE }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps: 
+      - uses: actions/checkout@v5
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Docker image to DockerHub
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/hub-repo:latest

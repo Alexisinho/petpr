@@ -1,3 +1,18 @@
+#  backend "s3" {
+# 1. Имя бакета, который ты создал руками
+#    bucket = "my-pet-project-tf-state-2025"    
+# 2. Путь к файлу внутри бакета (как папки)
+#    key    = "prod/terraform.tfstate"
+# 3. Твой регион
+#    region = "eu-central-1"
+# 4. Таблица для блокировок (которую создал руками)
+#    dynamodb_table = "terraform-locks"
+# 5. Шифрование файла стейта (безопасность)
+#    encrypt = true
+#  }
+# ---------------------
+#}
+
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
   version = "6.4.0"
