@@ -7,3 +7,6 @@
 
 # test ansible
 test-pet-playbook.yaml
+
+# SonarQube for Organization
+sonar-project.properties
