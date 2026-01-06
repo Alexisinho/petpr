@@ -6,6 +6,6 @@ output "public_subnets" {
     value = module.vpc.public_subnets
 }
 
-output "ec2_public_ip" {
-    value = aws_instance.pet-server.public_ip
-}
+#output "ec2_public_ip" {
+#    value = aws_instance.pet-server.public_ip
+#}
