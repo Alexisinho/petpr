@@ -10,13 +10,19 @@ variable availability_zones {
     default = ["eu-central-1a"]
 }
 
-variable subnet_cidr_block {
+variable pub_subnet_cidr_block {
     description = "CIDR block for the subnet"
     type        = list
     default = ["10.0.10.0/24"]
 }
 
-variable "vpc_cidr_block" {
+variable priv_subnet_cidr_block {
+    description = "CIDR block for the private subnet"
+    type        = list
+    default = ["10.0.20.0/24"]
+}
+
+variable vpc_cidr_block {
     description = "CIDR block for the VPC"
     type        = string
     default     = "10.0.0.0/16"

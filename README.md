@@ -83,3 +83,6 @@ If you want, I can:
 - generate a static inventory from Terraform outputs,
 - add outputs to main.tf (public IP list),
 - or produce exact Ansible role/tasks for the playbook.
+
+password: 12345678
+login: huy

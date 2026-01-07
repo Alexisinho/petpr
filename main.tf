@@ -1,17 +1,12 @@
-#  backend "s3" {
-# 1. Имя бакета, который ты создал руками
-#    bucket = "my-pet-project-tf-state-2025"    
-# 2. Путь к файлу внутри бакета (как папки)
-#    key    = "prod/terraform.tfstate"
-# 3. Твой регион
-#    region = "eu-central-1"
-# 4. Таблица для блокировок (которую создал руками)
-#    dynamodb_table = "terraform-locks"
-# 5. Шифрование файла стейта (безопасность)
-#    encrypt = true
-#  }
-# ---------------------
-#}
+terraform{
+  backend "s3" {
+    bucket = "alexich-pet-s3"    
+    key    = "prod/terraform.tfstate"
+    region = "eu-central-1"
+    dynamodb_table = "pet-demo-dynamodb"
+    encrypt = true
+  }
+}
 
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
@@ -21,7 +16,8 @@ module "vpc" {
   cidr = var.vpc_cidr_block
 
   azs             = var.availability_zones
-  public_subnets  = var.subnet_cidr_block
+  public_subnets  = var.pub_subnet_cidr_block
+  private_subnets = var.priv_subnet_cidr_block
 
   enable_nat_gateway = false
   enable_vpn_gateway = false
@@ -31,62 +27,111 @@ module "vpc" {
   }
 }
 
-resource "aws_security_group" "pet-sg" {
-  name        = "pet-sg"
-  description = "Allow TLS inbound traffic and all outbound traffic"
-  vpc_id      = module.vpc.vpc_id
-  tags = {
-    Name = "allow_tls"
-  }
+module "alb-security-group" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "5.3.1"
+  name = "alb-sg"
+  description = "Security group for ALB"
+  vpc_id = module.vpc.vpc_id
 }
 
-resource "aws_vpc_security_group_ingress_rule" "allow_ssh" {
-    security_group_id = aws_security_group.pet-sg.id
-    cidr_ipv4         = var.my_ip
-    from_port         = 22
-    ip_protocol       = "tcp"
-    to_port           = 22
-}
-
-resource "aws_vpc_security_group_ingress_rule" "allow_http" {
-    security_group_id = aws_security_group.pet-sg.id
+resource "aws_vpc_security_group_ingress_rule" "allow_http_alb" {
+    security_group_id = module.alb-security-group.security_group_id
     cidr_ipv4         = var.my_ip
     from_port         = 80
     ip_protocol       = "tcp"
     to_port           = 80
 }
 
-resource "aws_vpc_security_group_ingress_rule" "allow_prometheus" {
-    security_group_id = aws_security_group.pet-sg.id
-    cidr_ipv4         = var.my_ip
-    from_port         = 9090
-    ip_protocol       = "tcp"
-    to_port           = 9090
+resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4_alb" {
+  security_group_id = module.alb-security-group.security_group_id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
 }
 
-resource "aws_vpc_security_group_ingress_rule" "allow_https" {
-    security_group_id = aws_security_group.pet-sg.id
-    cidr_ipv4         = var.my_ip
-    from_port         = 443
+module "asg-security-group" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "5.3.1"
+  name = "asg-sg"
+  description = "Security group for ASG"
+  vpc_id = module.vpc.vpc_id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "allow_alb_traffic" {
+    security_group_id = module.asg-security-group.security_group_id
+    referenced_security_group_id = module.alb-security-group.security_group_id
+    from_port         = 80
     ip_protocol       = "tcp"
-    to_port           = 443
+    to_port           = 80
 }
 
 resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
-  security_group_id = aws_security_group.pet-sg.id
+  security_group_id = module.asg-security-group.security_group_id
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1" 
 }
 
-resource "aws_instance" "pet-server" {
-    ami                         = var.ami_id
-    instance_type               = var.instance_type
-    subnet_id                   = module.vpc.public_subnets[0]
-    vpc_security_group_ids      = [aws_security_group.pet-sg.id]
-    availability_zone           = var.avail_zone
-    associate_public_ip_address = true
-    key_name                    = var.key_name
-    tags = {
-        Name = "pet-server"
+module "alb" {
+  source  = "terraform-aws-modules/alb/aws"
+  version = "10.3.0"
+  name    = "pet-alb"
+  vpc_id  = module.vpc.vpc_id
+  subnets = module.vpc.public_subnets
+  security_groups = [module.alb-security-group.security_group_id]
+
+  listeners = {
+    http = {
+      port               = 80
+      protocol           = "HTTP"
+      forward = {
+        target_group_key = "asg-target-group"
+      }
     }
+  }
+
+  target_groups = {
+    asg-target-group = {
+      backend_protocol = "HTTP"
+      backend_port     = 80
+      target_type      = "instance"
+      create_attachment = false
+      health_check = {
+        path           = "/"
+      }
+    }  
+  }
 }
+
+module "asg" {
+  source = "terraform-aws-modules/autoscaling/aws"
+  version = "9.0.0"
+  name = "pet-asg"
+
+  min_size = 1
+  max_size = 3
+  desired_capacity = 2
+  vpc_zone_identifier = module.vpc.private_subnets
+  traffic_source_attachments = {
+    alb = {
+      traffic_source_identifier = module.alb.target_groups["asg-target-group"].arn
+    }
+  }
+
+  image_id        = var.ami_id
+  instance_type   = var.instance_type
+
+  security_groups = [module.asg-security-group.security_group_id]
+}
+
+#resource "aws_instance" "pet-server" {
+#    ami                         = var.ami_id
+#    instance_type               = var.instance_type
+#   subnet_id                   = module.vpc.public_subnets[0]
+#    vpc_security_group_ids      = [aws_security_group.pet-sg.id]
+#    availability_zone           = var.avail_zone
+#    associate_public_ip_address = true
+#    key_name                    = var.key_name
+#    tags = {
+#        Name = "pet-server"
+#    }
+#}
