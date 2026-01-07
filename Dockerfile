@@ -39,5 +39,8 @@ RUN chown -R appuser:appgroup /app
 # 6. Переключаемся на пользователя
 USER appuser
 
+# Expose port 80
+EXPOSE 80
+
 # Запускаем
 CMD ["python", "app.py"]

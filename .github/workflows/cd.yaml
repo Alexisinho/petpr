@@ -28,6 +28,10 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
+
+      - name: Terraform Destroy on Failure
+        if: failure()  # Выполнится только если apply упал
+        run: terraform destroy -auto-approve
       
   ansible:
     name: Configure Servers with Ansible

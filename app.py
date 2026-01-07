@@ -54,7 +54,10 @@ def index():
             elif op == "mul":
                 result = num1 * num2
             elif op == "div":
-                result = num1 / num2
+                if num2 == 0:
+                    error = "Cannot divide by zero"
+                else:
+                    result = num1 / num2
             else:
                 error = "Unknown operation"
         except Exception as e:
@@ -62,10 +65,21 @@ def index():
     return render_template_string(HTML, result=result, error=error)
 
 
-@app.route("/health")
-def health():
-    return jsonify(status="ok")
+@app.route("/healthz")
+def healthz():
+    """Health check endpoint for Prometheus and ALB"""
+    return jsonify(status="ok"), 200
+
+
+@app.route("/metrics")
+def metrics():
+    """Basic metrics endpoint for Prometheus scraping"""
+    # Simple text format that Prometheus can parse
+    return """# HELP flask_app_info Application information
+# TYPE flask_app_info gauge
+flask_app_info{version="1.0"} 1
+""", 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=80)
