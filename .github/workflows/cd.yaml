@@ -57,6 +57,8 @@ jobs:
           python -m pip install --upgrade pip
           # boto3 подхватит настройки от шага "Configure AWS Credentials" автоматически
           pip install ansible boto3 botocore docker
+          # Install amazon.aws collection for EC2 dynamic inventory
+          ansible-galaxy collection install amazon.aws
 
       - name: Configure SSH key
         run: |
