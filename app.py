@@ -65,8 +65,8 @@ def index():
     return render_template_string(HTML, result=result, error=error)
 
 
-@app.route("/healthz")
-def healthz():
+@app.route("/health")
+def health():
     """Health check endpoint for Prometheus and ALB"""
     return jsonify(status="ok"), 200
 

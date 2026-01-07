@@ -127,7 +127,7 @@
                 - targets: ['localhost:9100']
 
             - job_name: 'pet-app'
-              metrics_path: /healthz
+              metrics_path: /health
               static_configs:
                 - targets: ['localhost:80']
       tags: ['monitoring', 'setup']
