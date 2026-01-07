@@ -1,55 +1,84 @@
 --- 
-- name: docker-server
+- name: Deploy Pet Application with Monitoring Stack
   hosts: aws_ec2
   become: yes
   collections:
     - community.docker
+
   vars:
-    prometheus_image: "prom/prometheus:latest"
-    node_exporter_image: "quay.io/prometheus/node-exporter:latest"
-    prometheus_config_dir: /opt/prometheus
-    prometheus_data_dir: /opt/prometheus/data
-    image_name: "{{ lookup('env','DOCKERHUB_IMAGE') | default('aliaksinho13/hub-repo:latest', true) }}"
+    # Системные компоненты - фиксируем жестко
+    prometheus_ver: "v2.49.1"
+    node_exporter_ver: "v1.7.0"
+  
+    # Названия образов
+    prometheus_image: "prom/prometheus:{{ prometheus_ver }}"
+    node_exporter_image: "quay.io/prometheus/node-exporter:{{ node_exporter_ver }}"
+
+    # Пути
+    prometheus_config_dir: "/opt/prometheus"
+    prometheus_data_dir: "/opt/prometheus/data"
+
+    # Свое приложение - берем из переменной билда (тег или хеш)
+    # В CI запускаем: export APP_TAG=v1.2.3 && ansible-playbook ...
+    app_tag: "{{ lookup('env','APP_TAG') | default('stable', true) }}"
+    image_name: "aliaksinho13/hub-repo:{{ app_tag }}"
+
   tasks:
     - name: ensure pip3 is present
       package:
         name: python3-pip
         state: present
+      tags: ['setup']
+
     - name: ensure DOCKERHUB_IMAGE env is provided (CI) or fallback used
       assert:
         that:
           - image_name is not none
           - image_name != ''
         fail_msg: "DOCKERHUB_IMAGE is not set and no default is configured. Set the env var in CI or update the playbook variable."
+      tags: ['validation']
+
+    - name: ensure DockerHub credentials are provided
+      assert:
+        that:
+          - lookup('env','DOCKERHUB_USERNAME') != ''
+          - lookup('env','DOCKERHUB_TOKEN') != ''
+        fail_msg: "DockerHub credentials not set. Export DOCKERHUB_USERNAME and DOCKERHUB_TOKEN."
+      when: not ansible_check_mode
+      tags: ['validation']
     - name: install docker SDK on remote for Ansible docker modules
       pip:
         name: docker
         state: present
         executable: pip3
         extra_args: --ignore-installed requests urllib3
+      tags: ['setup']
 
     - name: make sure docker is installed
-      yum:
+      package:
         name: docker
-        update_cache: yes
         state: present
+      tags: ['setup']
 
     - name: ensure docker is running 
       systemd:
         name: docker
         state: started
         enabled: yes
+      tags: ['setup']
 
     - name: Docker Login
       docker_login:
         username: "{{ lookup('env','DOCKERHUB_USERNAME') }}"
         password: "{{ lookup('env','DOCKERHUB_TOKEN') }}"
         registry_url: https://index.docker.io/v1/
+      tags: ['app', 'deploy']
 
     - name: pull docker image
       docker_image:
         name: "{{ image_name }}"
         source: pull
+      tags: ['app', 'deploy']
 
     - name: run docker container
       docker_container:
@@ -57,14 +86,33 @@
         image: "{{ image_name }}"
         state: started
         restart_policy: always
+        recreate: yes
+        pull: yes
         ports:
           - "80:80"
-######################################################'
+      tags: ['app', 'deploy']
+
+    - name: Wait for pet-app to be healthy
+      wait_for:
+        host: localhost
+        port: 80
+        delay: 5
+        timeout: 60
+      tags: ['app', 'verify']
+######################################################
     - name: Create Prometheus config directory
       file:
         path: "{{ prometheus_config_dir }}"
         state: directory
         mode: '0755'
+      tags: ['monitoring', 'setup']
+
+    - name: Create Prometheus data directory
+      file:
+        path: "{{ prometheus_data_dir }}"
+        state: directory
+        mode: '0755'
+      tags: ['monitoring', 'setup']
 
     - name: Deploy Prometheus config
       copy:
@@ -79,9 +127,10 @@
                 - targets: ['localhost:9100']
 
             - job_name: 'pet-app'
-              metrics_path: /healthz
+              metrics_path: /health
               static_configs:
                 - targets: ['localhost:80']
+      tags: ['monitoring', 'setup']
 
     - name: Fix Prometheus data permissions
       file:
@@ -89,6 +138,7 @@
         owner: 65534
         group: 65534
         recurse: yes
+      tags: ['monitoring', 'setup']
 
     - name: Run Prometheus container
       docker_container:
@@ -96,11 +146,24 @@
         image: "{{ prometheus_image }}"
         state: started
         restart_policy: always
+        recreate: yes
+        pull: yes
         ports:
           - "9090:9090"
         volumes:
           - "{{ prometheus_config_dir }}/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
           - "{{ prometheus_data_dir }}:/prometheus"
+      tags: ['monitoring', 'deploy']
+
+    - name: Verify Prometheus is accessible
+      uri:
+        url: http://localhost:9090/-/healthy
+        status_code: 200
+      retries: 3
+      delay: 5
+      register: prometheus_health
+      until: prometheus_health is succeeded
+      tags: ['monitoring', 'verify']
 
     # --- Node Exporter setup ---
     - name: Run Node Exporter container
@@ -109,5 +172,18 @@
         image: "{{ node_exporter_image }}"
         state: started
         restart_policy: always
+        recreate: yes
+        pull: yes
         ports:
           - "9100:9100"
+      tags: ['monitoring', 'deploy']
+
+    - name: Verify Node Exporter is accessible
+      uri:
+        url: http://localhost:9100/metrics
+        status_code: 200
+      retries: 3
+      delay: 5
+      register: node_exporter_health
+      until: node_exporter_health is succeeded
+      tags: ['monitoring', 'verify']

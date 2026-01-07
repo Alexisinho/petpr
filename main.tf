@@ -19,7 +19,8 @@ module "vpc" {
   public_subnets  = var.pub_subnet_cidr_block
   private_subnets = var.priv_subnet_cidr_block
 
-  enable_nat_gateway = false
+  enable_nat_gateway = true
+  single_nat_gateway = true  # Use one NAT gateway to save costs (not for production HA)
   enable_vpn_gateway = false
 
   tags = {
@@ -63,6 +64,14 @@ resource "aws_vpc_security_group_ingress_rule" "allow_alb_traffic" {
     from_port         = 80
     ip_protocol       = "tcp"
     to_port           = 80
+}
+
+resource "aws_vpc_security_group_ingress_rule" "allow_ssh" {
+    security_group_id = module.asg-security-group.security_group_id
+    cidr_ipv4         = var.my_ip
+    from_port         = 22
+    ip_protocol       = "tcp"
+    to_port           = 22
 }
 
 resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
@@ -110,7 +119,7 @@ module "asg" {
   min_size = 1
   max_size = 3
   desired_capacity = 2
-  vpc_zone_identifier = module.vpc.private_subnets
+  vpc_zone_identifier = module.vpc.public_subnets  # Changed from private to public
   traffic_source_attachments = {
     alb = {
       traffic_source_identifier = module.alb.target_groups["asg-target-group"].arn
@@ -119,8 +128,17 @@ module "asg" {
 
   image_id        = var.ami_id
   instance_type   = var.instance_type
+  key_name        = var.key_name
 
   security_groups = [module.asg-security-group.security_group_id]
+  
+  # Enable public IP for instances in public subnets
+  network_interfaces = [{
+    associate_public_ip_address = true
+    delete_on_termination      = true
+    device_index              = 0
+    security_groups           = [module.asg-security-group.security_group_id]
+  }]
 }
 
 #resource "aws_instance" "pet-server" {

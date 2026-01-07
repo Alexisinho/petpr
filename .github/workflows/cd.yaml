@@ -28,6 +28,10 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
+
+      - name: Terraform Destroy on Failure
+        if: failure()  # Выполнится только если apply упал
+        run: terraform destroy -auto-approve
       
   ansible:
     name: Configure Servers with Ansible
@@ -53,6 +57,8 @@ jobs:
           python -m pip install --upgrade pip
           # boto3 подхватит настройки от шага "Configure AWS Credentials" автоматически
           pip install ansible boto3 botocore docker
+          # Install amazon.aws collection for EC2 dynamic inventory
+          ansible-galaxy collection install amazon.aws
 
       - name: Configure SSH key
         run: |

@@ -54,10 +54,7 @@ def test_division(client):
 def test_division_by_zero(client):
     """Тест деления на ноль (должна быть ошибка)"""
     response = client.post("/", data={"num1": "5", "num2": "0", "operation": "div"})
-    # В твоем коде это вызывает исключение, которое ловится блоком try/except
-    # и выводится как "Error: float division by zero"
-    assert b"Error" in response.data
-    assert b"division by zero" in response.data
+    assert b"Cannot divide by zero" in response.data
 
 
 def test_invalid_input(client):
