@@ -2,13 +2,13 @@
 plugin: amazon.aws.aws_ec2
 regions:
   - eu-central-1
-filters:
-  tag:aws:autoscaling:groupName: pet-asg
-  instance-state-name: running
+#filters:
+#  tag:aws:autoscaling:groupName: pet-asg
+#  instance-state-name: running
 hostnames:
   - public_ip_address
 compose:
   ansible_host: public_ip_address
 groups:
   aws_ec2: true
-strict: False
+strict: Fals
