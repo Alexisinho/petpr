@@ -21,7 +21,7 @@
 
     # Свое приложение - берем из переменной билда (тег или хеш)
     # В CI запускаем: export APP_TAG=v1.2.3 && ansible-playbook ...
-    app_tag: "{{ lookup('env','APP_TAG') | default('stable', true) }}"
+    app_tag: "{{ lookup('env','APP_TAG') | default('latest', true) }}"
     image_name: "aliaksinho13/hub-repo:{{ app_tag }}"
 
   tasks:
