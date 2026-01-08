@@ -9,4 +9,6 @@ hostnames:
   - public_ip_address
 compose:
   ansible_host: public_ip_address
+groups:
+  aws_ec2: true
 strict: False

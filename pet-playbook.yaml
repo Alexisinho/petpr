@@ -1,6 +1,7 @@
 --- 
 - name: Deploy Pet Application with Monitoring Stack
   hosts: aws_ec2
+  gather_facts: no
   become: yes
   collections:
     - community.docker
@@ -24,6 +25,14 @@
     image_name: "aliaksinho13/hub-repo:{{ app_tag }}"
 
   tasks:
+    - name: Wait for SSH connection to be available
+      wait_for_connection:
+        connect_timeout: 60
+        sleep: 5
+        delay: 10
+        timeout: 300
+      tags: ['connection']
+
     - name: ensure pip3 is present
       package:
         name: python3-pip

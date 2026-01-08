@@ -66,6 +66,9 @@ jobs:
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/latest.pem
           chmod 600 ~/.ssh/latest.pem
 
+      - name: Debug Inventory
+        run: ansible-inventory -i inventory/aws_ec2.yaml --graph
+
       - name: Run Ansible Playbook
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -73,4 +76,7 @@ jobs:
           DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_IMAGE }}
           ANSIBLE_HOST_KEY_CHECKING: "False"
           ANSIBLE_FORCE_COLOR: "true"
-        run: ansible-playbook -i inventory/aws_ec2.yaml pet-playbook.yaml
+        run: |
+          ansible-playbook -i inventory/aws_ec2.yaml pet-playbook.yaml \
+          -u ec2-user \
+          --private-key ~/.ssh/latest.pem
